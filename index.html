@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Midnight Thoughts</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: 'Georgia', serif;
+  background: radial-gradient(circle at top, #1f1f1f, #0a0a0a);
+  color: #f5f5f5;
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+  overflow-x: hidden;
+}
+
+/* 🌫️ soft glow overlay */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle, rgba(255,255,255,0.05), transparent 70%);
+  pointer-events: none;
+}
+
+/* 🌫️ Floating particles */
+.particle {
+  position: fixed;
+  width: 2px;
+  height: 2px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  animation: float 12s linear infinite;
+}
+
+@keyframes float {
+  from { transform: translateY(100vh); }
+  to { transform: translateY(-10vh); }
+}
+
+.container {
+  width: 600px;
+  max-width: 90%;
+  padding: 25px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 0 40px rgba(0,0,0,0.6);
+}
+
+h1 {
+  text-align: center;
+  font-weight: 300;
+  letter-spacing: 3px;
+  margin-bottom: 25px;
+  text-shadow: 0 0 12px rgba(255,255,255,0.2);
+}
+
+/* ✍️ textarea */
+textarea {
+  width: 100%;
+  height: 120px;
+  background: rgba(255,255,255,0.06);
+  border: none;
+  padding: 15px;
+  color: white;
+  font-size: 16px;
+  resize: none;
+  outline: none;
+  border-radius: 12px;
+  transition: 0.3s;
+}
+
+textarea:focus {
+  box-shadow: 0 0 15px rgba(255,255,255,0.15);
+}
+
+/* 🌙 dropdown FIXED */
+select {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(255,255,255,0.08);
+  border: none;
+  color: #f5f5f5;
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+}
+
+select option {
+  background: #1a1a1a;
+  color: #f5f5f5;
+}
+
+/* buttons */
+button {
+  padding: 10px 18px;
+  background: rgba(255,255,255,0.08);
+  border: none;
+  color: white;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: rgba(255,255,255,0.18);
+  box-shadow: 0 0 12px rgba(255,255,255,0.2);
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+/* 📝 entries */
+.entry {
+  background: rgba(255,255,255,0.06);
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 14px;
+  backdrop-filter: blur(6px);
+  animation: fadeIn 0.6s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.time {
+  font-size: 12px;
+  opacity: 0.5;
+  margin-bottom: 5px;
+}
+
+/* 🏷️ mood pill */
+.tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  margin-bottom: 6px;
+  background: rgba(255,255,255,0.1);
+}
+</style>
+</head>
+
+<body>
+
+<!-- 🎧 Rain Sound -->
+<audio id="rainAudio" loop preload="auto">
+  <source src="https://assets.mixkit.co/sfx/preview/mixkit-light-rain-loop-2393.mp3" type="audio/mpeg">
+</audio>
+
+<div class="container">
+  <h1>Midnight Thoughts</h1>
+
+  <textarea id="entryInput" placeholder="Write what keeps you awake..."></textarea>
+
+  <select id="moodSelect">
+    <option value="all">Select mood</option>
+    <option value="sad">Sad</option>
+    <option value="overthinking">Overthinking</option>
+    <option value="numb">Numb</option>
+    <option value="happy">Happy</option>
+    <option value="angry">Angry</option>
+  </select>
+
+  <div class="controls">
+    <button onclick="saveEntry()">Save Thought</button>
+    <button onclick="filterEntries()">Filter Mood</button>
+    <button onclick="showRandom()">Random Thought</button>
+    <button onclick="showAll()">Show All</button>
+    <button id="soundBtn">🎧 Sound</button>
+  </div>
+
+  <div id="entries"></div>
+</div>
+
+<script>
+let entries = JSON.parse(localStorage.getItem("entries")) || [];
+
+/* ✨ Typewriter effect */
+function typeWriter(element, text, speed = 20) {
+  element.innerHTML = "";
+  let i = 0;
+  function typing() {
+    if (i < text.length) {
+      element.innerHTML += text.charAt(i);
+      i++;
+      setTimeout(typing, speed);
+    }
+  }
+  typing();
+}
+
+function saveEntry() {
+  const text = document.getElementById("entryInput").value;
+  const mood = document.getElementById("moodSelect").value;
+
+  if (!text.trim()) return;
+
+  const entry = {
+    text: text,
+    mood: mood === "all" ? "none" : mood,
+    time: new Date().toLocaleString()
+  };
+
+  entries.unshift(entry);
+  localStorage.setItem("entries", JSON.stringify(entries));
+
+  document.getElementById("entryInput").value = "";
+  renderEntries(entries);
+}
+
+function renderEntries(list) {
+  const container = document.getElementById("entries");
+  container.innerHTML = "";
+
+  list.forEach(entry => {
+    const div = document.createElement("div");
+    div.className = "entry";
+
+    const textDiv = document.createElement("div");
+
+    div.innerHTML = `
+      <div class="time">${entry.time}</div>
+      <div class="tag">Mood: ${entry.mood}</div>
+    `;
+
+    div.appendChild(textDiv);
+    container.appendChild(div);
+
+    typeWriter(textDiv, entry.text);
+  });
+}
+
+function filterEntries() {
+  const mood = document.getElementById("moodSelect").value;
+  if (mood === "all") return renderEntries(entries);
+
+  const filtered = entries.filter(e => e.mood === mood);
+  renderEntries(filtered);
+}
+
+function showRandom() {
+  if (entries.length === 0) return;
+
+  const random = entries[Math.floor(Math.random() * entries.length)];
+  renderEntries([random]);
+}
+
+function showAll() {
+  renderEntries(entries);
+}
+
+/* 🎧 Sound toggle */
+const audio = document.getElementById("rainAudio");
+const btn = document.getElementById("soundBtn");
+
+let isPlaying = false;
+
+btn.addEventListener("click", () => {
+  if (!isPlaying) {
+    audio.volume = 0.4;
+
+    audio.play()
+      .then(() => {
+        btn.textContent = "🔇 Stop";
+        isPlaying = true;
+      })
+      .catch(() => {
+        alert("Click again to enable sound 🌙");
+      });
+
+  } else {
+    audio.pause();
+    btn.textContent = "🎧 Sound";
+    isPlaying = false;
+  }
+});
+
+/* 🌫️ particles */
+function createParticles() {
+  for (let i = 0; i < 30; i++) {
+    const p = document.createElement("div");
+    p.className = "particle";
+    p.style.left = Math.random() * 100 + "vw";
+    p.style.animationDuration = (6 + Math.random() * 10) + "s";
+    document.body.appendChild(p);
+  }
+}
+
+createParticles();
+renderEntries(entries);
+</script>
+
+</body>
+</html>
